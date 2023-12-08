@@ -4,7 +4,7 @@ import os
 from uuid import uuid4
 from flask import Flask
 from wsgiserver import WSGIServer
-from routes import routes
+from routes import api
 
 
 class APIServer:
@@ -29,7 +29,7 @@ class APIServer:
         """ Start API server"""
         print(f'API: http://{self.ip}:{self.port}')
         self.config()
-        self.app.register_blueprint(routes)
+        self.app.register_blueprint(api)
 
         self.server = WSGIServer(self.app, host=self.ip, port=self.port)
         self.server.start()
