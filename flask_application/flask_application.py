@@ -5,6 +5,10 @@ from uuid import uuid4
 from flask import Flask
 from wsgiserver import WSGIServer
 from routes import api
+from database import db
+
+
+DATABASE_URI = f"sqlite:///{os.path.join(os.getcwd(), 'tasks.db')}"
 
 
 class APIServer:
@@ -25,11 +29,26 @@ class APIServer:
         self.app.config['SESSION_COOKIE_SAMESITE'] = 'Strict'
         self.app.config['DEBUG'] = self.debug
 
+        # Configure SQLite database
+        self.app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URI
+        self.app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+        # Bind and initialize database
+        db.init_app(self.app)
+
+    def create_tables(self):
+        """ Create database tables """
+        with self.app.app_context():
+            db.create_all()
+
     def run(self):
         """ Start API server"""
         print(f'API: http://{self.ip}:{self.port}')
         self.config()
         self.app.register_blueprint(api)
+
+        # Create database
+        self.create_tables()
 
         self.server = WSGIServer(self.app, host=self.ip, port=self.port)
         self.server.start()
