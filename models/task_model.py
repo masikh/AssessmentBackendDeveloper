@@ -1,3 +1,4 @@
+""" This file holds the model for a task and a helper function to check its types """
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
