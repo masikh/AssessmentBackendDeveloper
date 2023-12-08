@@ -1,47 +1,8 @@
 """ This file holds the model for a task and a helper function to check its types """
-from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
-
-
-def enforce_types(cls):
-    """ Decorator method. Its purpose is to enforce the types for class attributes
-        used upon initialization and modification.
-    """
-
-    class Wrapper(cls):  # pylint: disable=too-few-public-methods
-        """ This wrapper class overrides the __init__ and __setattr__ of the wrapped
-            class in order to check if the type of its attributes adhere to its annotation
-        """
-
-        def __init__(self, *args, **kwargs):
-            """ Override the 'dunder' __init__ in order to check for correct types upon
-                initialization.
-            """
-            super().__init__(*args, **kwargs)
-            self._check_types()
-
-        def __setattr__(self, name, value):
-            """ Override the 'dunder' __setattr__ in order to check for correct types upon
-                modification.
-            """
-            super().__setattr__(name, value)
-            self._check_types()
-
-        def _check_types(self):
-            """ Check each class attribute using its annotation for correct types """
-
-            # Get all attributes and its values of the class
-            for attribute_name, attribute_type in self.__annotations__.items():
-                # get the value for the attribute 'field_name'
-                attribute_value = getattr(self, attribute_name)
-
-                # if the field its value is not of the type (annotation) for this field, raise an exception
-                if not isinstance(attribute_value, attribute_type):
-                    raise TypeError(f"Invalid type for '{attribute_name}': {type(attribute_value).__name__}")
-
-    # Return the wrapped class with the overridden 'dunders'.
-    return Wrapper
+from sqlalchemy import Column, Integer, String, Enum as SQLAlchemyEnum
+from database import db  # Import the db instance from the main application file
 
 
 class TaskStatus(Enum):  # inheritance of the Enum class
@@ -57,9 +18,7 @@ class TaskStatus(Enum):  # inheritance of the Enum class
     # DISCARDED = "discarded"
 
 
-@enforce_types
-@dataclass
-class Task:
+class Task(db.Model):
     """
     This dataclass hold the simple structure for a class. It sets some default attribute values upon
     initialization (see below)
@@ -80,9 +39,35 @@ class Task:
     due_date: datetime object set to a week from now
 
     """
+    __tablename__ = 'tasks'
 
     # Set annotations for class attributes
-    title: str = "New task"
-    description: str = "Description"
-    status: TaskStatus = TaskStatus.PENDING
-    due_date: datetime = datetime.now() + timedelta(weeks=1)
+    id: int = Column(Integer, primary_key=True, autoincrement=True)
+    title: str = Column(String, default="New task")
+    description: str = Column(String, default="Description")
+    status: TaskStatus = Column(SQLAlchemyEnum(TaskStatus), default=TaskStatus.PENDING)
+    due_date: datetime = Column(db.DateTime, default=datetime.now() + timedelta(weeks=1))
+
+    def serialize(self):
+        """ serialize the task via a dict comprehension """
+
+        # Note: using a dict comprehension here is more complicated due to status and due_date,
+        # hence it less dynamic.
+        return {
+            'id': self.id,
+            'title': self.title,
+            'description': self.description,
+            'status': self.status.value,  # Assuming status is an Enum
+            'due_date': self.due_date.isoformat()  # Convert datetime to string
+        }
+
+    def deserialize(self, data: dict):
+        """ Populate task attributes from dict (data) """
+
+        # Note: using a dict comprehension here is more complicated due to status and due_date,
+        # hence it less dynamic.
+        self.title = data.get('title') if data.get('title') is not None else self.title
+        self.description = data.get('description') if data.get('description') is not None else self.description
+        self.status = TaskStatus(data.get('status')) if data.get('status') is not None else self.status
+        self.due_date = datetime.fromisoformat(data.get('due_date')) if data.get('due_date') else self.due_date
+        return self
