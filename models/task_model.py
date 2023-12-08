@@ -8,7 +8,7 @@ def enforce_types(cls):
         used upon initialization and modification.
     """
 
-    class Wrapper(cls):
+    class Wrapper(cls):  # pylint: disable=too-few-public-methods
         """ This wrapper class overrides the __init__ and __setattr__ of the wrapped
             class in order to check if the type of its attributes adhere to its annotation
         """
@@ -43,7 +43,7 @@ def enforce_types(cls):
     return Wrapper
 
 
-class TaskStatus(Enum):
+class TaskStatus(Enum):  # inheritance of the Enum class
     """
     Enum class for the status of a task.
 
