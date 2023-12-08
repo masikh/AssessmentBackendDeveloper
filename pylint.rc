@@ -1,0 +1,4 @@
+[FORMAT]
+
+# Set the maximum line length
+max-line-length=120
