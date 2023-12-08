@@ -1,3 +1,4 @@
+""" Unit tests for Task, TaskStatus, enforce_types """
 import unittest
 from datetime import datetime, timedelta
 
@@ -10,7 +11,7 @@ from models.task_model import Task, TaskStatus, enforce_types
 
 
 @enforce_types
-class MockedClass:
+class MockedClass:  # pylint: disable=too-few-public-methods
     """ Create an arbitrary class with two attributes (annotated!).
         The class is decorated in order to test the decorator itself.
     """
