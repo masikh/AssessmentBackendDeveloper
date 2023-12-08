@@ -25,4 +25,4 @@ It's great that you are taking our test. Through this test, we aim to assess you
 
 - Structure and organization (40%)
 - Reusability and performance (30%)
-Code quality and best practices (30%)
+- Code quality and best practices (30%)
