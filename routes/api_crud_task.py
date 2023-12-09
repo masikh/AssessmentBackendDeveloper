@@ -31,11 +31,11 @@ def response_not_found():
     return response
 
 
-def response_bad_request():
+def response_bad_request(error='Bad request'):
     """ Generic 400 response """
 
     # Build a 400 response
-    response = make_response(jsonify({'error': 'Bad request'}))
+    response = make_response(jsonify({'error': error}))
     response.status_code = HTTPStatus.BAD_REQUEST
     return response
 
@@ -130,12 +130,24 @@ def api_crud_task_get_all():
         # Convert tasks to a list of dictionaries and return result
         return [task.serialize() for task in tasks]
 
+    # Get pagination parameters
+    page = request.args.get('page', default='1')
+    page_size = request.args.get('page_size', default='20')
+
     # Because we make use of a memoization decorator
     user_token = 'user_token_get_all'  # <- TODO: remove is authorization is implemented
     response = get_all(user_token)
 
+    # Check that the pagination parameters are digits
+    if not page.isdigit() or not page_size.isdigit():
+        # Return a comprehensive 400 response
+        return response_bad_request("Invalid page or page_size. Please provide valid numeric values.")
+
+    page = int(page)
+    page_size = int(page_size)
+
     # Set paginated response
-    paginated_response = set_paginated_response(response)
+    paginated_response = set_paginated_response(response, page=page, page_size=page_size)
 
     # Build 200 response
     response = make_response(paginated_response)

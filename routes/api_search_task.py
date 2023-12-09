@@ -99,6 +99,10 @@ def api_search_task():
     # Get the value of the query parameter
     query = request.args.get('title', default=None)
 
+    # Get pagination parameters
+    page = request.args.get('page', default='1')
+    page_size = request.args.get('page_size', default='20')
+
     # Some filtering query parameters. It's possible to filter on status and date (after AND before)
     # If Filtering on due_date request it's mandatory to provide both 'after' and 'before'
     status = request.args.get('status', default=None)
@@ -114,6 +118,15 @@ def api_search_task():
     memoize_key = '+'.join(str(value) for value in non_none_values if value is not None)
 
     # Guard clauses
+
+    # Check that the pagination parameters are digits
+    if not page.isdigit() or not page_size.isdigit():
+        # Return a comprehensive 400 response
+        return response_bad_request("Invalid page or page_size. Please provide valid numeric values.")
+
+    page = int(page)
+    page_size = int(page_size)
+
 
     # check if the used status exist
     if not is_valid_enum(status, TaskStatus):
@@ -150,7 +163,7 @@ def api_search_task():
     )
 
     # Set paginated response
-    paginated_response = set_paginated_response(tasks_list)
+    paginated_response = set_paginated_response(tasks_list, page=page, page_size=page_size)
 
     # Build 200 response
     response = make_response(paginated_response)
