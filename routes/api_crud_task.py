@@ -23,16 +23,16 @@ def response_ok(task):
 def response_not_found():
     """ Generic 404 response """
 
-    # Build response
+    # Build a 404 response
     response = make_response(jsonify({'error': 'Task not found'}))
     response.status_code = HTTPStatus.NOT_FOUND
     return response
 
 
 def response_bad_request():
-    """ Generic 404 response """
+    """ Generic 400 response """
 
-    # Build response
+    # Build a 400 response
     response = make_response(jsonify({'error': 'Bad request'}))
     response.status_code = HTTPStatus.BAD_REQUEST
     return response
@@ -42,6 +42,13 @@ def response_bad_request():
 def handle_internal_server_error(error):
     """ Custom internal server error handler """
 
+    # Any 500 (Internal server error) will be handled by this response.
+    # E.g. This might occur when malformed data is sent to the deserializer.
+    # Using this generic errorhandler saves the need for hard to read try-excepts
+    # throughout the code, at the cost of loosing detailed error messages. Since
+    # it's always possible to use a custom try-except where its deemed fit, this
+    # will serve as an extra save guard.
+
     response = make_response(jsonify({'error': str(error)}))
     response.status_code = HTTPStatus.INTERNAL_SERVER_ERROR
     return response
@@ -49,7 +56,7 @@ def handle_internal_server_error(error):
 
 @api.route('/api/task', defaults={'task_id': None}, methods=['GET', 'POST', 'PATCH', 'DELETE'])
 @api.route('/api/task/<int:task_id>', methods=['GET', 'POST', 'PATCH', 'DELETE'])
-def api_crud_task(task_id):
+def api_crud_task(task_id):  # pylint: disable=too-many-return-statements
     """ CRUD API for tasks, depending on the HTTP-method and argument a handler is chosen
 
         GET: (with task_id) -> api_crud_task_get(task_id)
@@ -60,6 +67,9 @@ def api_crud_task(task_id):
         *: returns a HTTPStatus.METHOD_NOT_ALLOWED with a error message
 
         For authorization has been omitted for this assessment, authentication well be implemented
+
+        NOTE: pylint gives a warning about too many return statements, justified in most cases,
+        but in my opinion not applicable in this case.
 
         TODO: authentication (authorization will not be implemented for this assessment)
               pagination
@@ -75,6 +85,7 @@ def api_crud_task(task_id):
 
     # Warning -> fully NULL primary key identity cannot load any object. This condition may
     # raise an error in a future release. error in: task = Task.query.get(task_id)
+    # There is no need to wait for a bug, we solve it right here.
     if request.method in ['PATCH', 'DELETE'] and task_id is None:
         return response_bad_request()
 
@@ -88,22 +99,15 @@ def api_crud_task(task_id):
         return api_crud_task_get(task_id)
 
     if request.method == 'POST':
-        # Handle POST request. Although it technically makes no difference if there is a task_id
-        # or not. It's not clean and hence a bad_request
-        if task_id is not None:
-            return response_bad_request()
+        # Handle POST request
         return api_crud_task_post()
 
     if request.method == 'PATCH':
         # Handle PATCH request. If not task_id is provided we consider it a bad request
-        if task_id is None:
-            return response_bad_request()
         return api_crud_task_patch(task_id)
 
     if request.method == 'DELETE':
         # Handle DELETE request
-        if task_id is None:
-            return response_bad_request()
         return api_crud_task_delete(task_id)
 
     # Method is not supported
@@ -150,6 +154,7 @@ def api_crud_task_post():
 
     # Create a new task instance. If the data is malformed an internal server error
     # will occur and shall be processed by the @api.errorhandler(InternalServerError)
+    # Thus there is no need for extra exception handling
     new_task = Task()
     new_task.deserialize(data)
 
@@ -188,16 +193,19 @@ def api_crud_task_patch(task_id):
 
 def api_crud_task_delete(task_id):
     """ Logic for handling DELETE request """
+
+    # Get the task from the database by 'id'
     task = Task.query.get(task_id)
 
-    if task:
-        # Delete the task from database
-        db.session.delete(task)
-        db.session.commit()
+    # If no task is found, leave this function with a 404
+    if not task:
+        return response_not_found()
 
-        # Build 200 response
-        response = make_response('DELETED')
-        response.status_code = HTTPStatus.OK
-        return response
+    # Delete the task from database
+    db.session.delete(task)
+    db.session.commit()
 
-    return response_not_found()
+    # Build 200 response
+    response = make_response('DELETED')
+    response.status_code = HTTPStatus.OK
+    return response
