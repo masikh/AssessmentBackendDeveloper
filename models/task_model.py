@@ -41,7 +41,8 @@ class Task(db.Model):
     """
     __tablename__ = 'tasks'
 
-    # Set annotations for class attributes
+    # Set annotations for class attributes (e.g. int, str etc...)
+    # Also set defaults for each field
     id: int = Column(Integer, primary_key=True, autoincrement=True)
     title: str = Column(String, default="New task")
     description: str = Column(String, default="Description")
@@ -51,21 +52,24 @@ class Task(db.Model):
     def serialize(self):
         """ serialize the task via a dict comprehension """
 
-        # Note: using a dict comprehension here is more complicated due to status and due_date,
-        # hence it less dynamic.
+        # Note: using a dynamic dict comprehension here (tempting!) is more complicated due to
+        # 'status' and 'due_date', which needs to be converted to a string before it can be sent
+        # over the wire. Does the 'from sqlalchemy_serializer import SerializerMixin' provide any
+        # solutions for cleaner abstraction?
         return {
             'id': self.id,
             'title': self.title,
             'description': self.description,
-            'status': self.status.value,  # Assuming status is an Enum
-            'due_date': self.due_date.isoformat()  # Convert datetime to string
+            'status': self.status.value,  # Convert Enum to string value
+            'due_date': self.due_date.isoformat()  # Convert datetime to string value
         }
 
     def deserialize(self, data: dict):
         """ Populate task attributes from dict (data) """
 
-        # Note: using a dict comprehension here is more complicated due to status and due_date,
-        # hence it less dynamic.
+        # Note: using a dynamic dict comprehension here (tempting!) is more complicated due to
+        # 'status' and 'due_date', which needs to be converted to an object before it can be sent
+        # to the database. (see also: comments for serialize)
         self.title = data.get('title') if data.get('title') is not None else self.title
         self.description = data.get('description') if data.get('description') is not None else self.description
         self.status = TaskStatus(data.get('status')) if data.get('status') is not None else self.status
