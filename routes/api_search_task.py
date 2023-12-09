@@ -6,6 +6,8 @@ from routes import api
 from models import Task, TaskStatus
 from generic_helpers.levenshtein import search_by_levenshtein
 from generic_helpers.is_valid_enum import is_valid_enum
+from generic_helpers.pagination import set_paginated_response
+from flask_application import memoize
 
 
 def response_bad_request(error):
@@ -43,46 +45,19 @@ def set_and_check_date_filter_prerequisites(after, before):
     raise ValueError("either 'after' or 'before' is missing")
 
 
-@api.route('/api/task/search', methods=['GET'])
-def api_search_task():
-    """ Search through the tasks by title """
+@memoize
+# pylint: disable=too-many-arguments
+def handle_search_request(
+        user_token,  # pylint: disable=unused-argument
+        query=None,
+        status=None,
+        after=None,
+        before=None,
+        sort_order=None):
+    """ Memoized handler for search request
 
-    # Get the value of the query parameter
-    query = request.args.get('title', default=None)
-
-    # Some filtering query parameters. It's possible to filter on status and date (after AND before)
-    # If Filtering on due_date request it's mandatory to provide both 'after' and 'before'
-    status = request.args.get('status', default=None)
-    after = request.args.get('after', default=None)
-    before = request.args.get('before', default=None)
-
-    # Sorting parameter, default is descenting
-    sort_order = request.args.get('sort_order', default='descending')
-
-    # Guard clauses
-
-    # check if the used status exist
-    if not is_valid_enum(status, TaskStatus):
-        # Dynamically build a list of statuses
-        valid_statuses = str([f'{status.value}' for status in TaskStatus])
-
-        # Return a comprehensive 400 response
-        return response_bad_request(f'invalid statuses, use one of: {valid_statuses}')
-
-    # check if the date stamps are correct (if any!)
-    if after is not None or before is not None:
-        try:
-            # check_date_filter raises a ValueError if a check is failed,
-            # in this manner the error message can be provided to the end user
-            after, before = set_and_check_date_filter_prerequisites(after, before)
-        except ValueError as error:
-            # Return a comprehensive 400 response
-            return response_bad_request(error)
-
-    # Check if the sort_order is either ascending or descending
-    if sort_order not in ['ascending', 'descending']:
-        # Return a comprehensive 400 response
-        return response_bad_request("invalid sort value, use one of: ['ascending', 'descending']")
+        Method supports searching, filtering and sorting
+    """
 
     # Build a list of tasks
     if query is None:
@@ -110,10 +85,74 @@ def api_search_task():
     def sort_by_due_date(item):
         return datetime.fromisoformat(item['due_date'])
 
+    # set sort_order
     reverse_order = bool(sort_order == 'descending')
-    tasks_list = sorted(tasks_list, key=sort_by_due_date, reverse=reverse_order)
+
+    # return sorted result
+    return sorted(tasks_list, key=sort_by_due_date, reverse=reverse_order)
+
+
+@api.route('/api/task/search', methods=['GET'])
+def api_search_task():
+    """ Search through the tasks by title """
+
+    # Get the value of the query parameter
+    query = request.args.get('title', default=None)
+
+    # Some filtering query parameters. It's possible to filter on status and date (after AND before)
+    # If Filtering on due_date request it's mandatory to provide both 'after' and 'before'
+    status = request.args.get('status', default=None)
+    after = request.args.get('after', default=None)
+    before = request.args.get('before', default=None)
+
+    # Sorting parameter, default is descending
+    sort_order = request.args.get('sort_order', default='descending')
+
+    # Build memoization key
+    # Create a list of non-None values and Concatenate the non-None values into a string
+    non_none_values = [query, status, after, before, sort_order]  # <- add user_token when authorization is implemented
+    memoize_key = '+'.join(str(value) for value in non_none_values if value is not None)
+
+    # Guard clauses
+
+    # check if the used status exist
+    if not is_valid_enum(status, TaskStatus):
+        # Dynamically build a list of statuses
+        valid_statuses = str([f'{status.value}' for status in TaskStatus])
+
+        # Return a comprehensive 400 response
+        return response_bad_request(f'invalid statuses, use one of: {valid_statuses}')
+
+    # check if the date stamps are correct (if any!)
+    if after is not None or before is not None:
+        try:
+            # check_date_filter raises a ValueError if a check is failed,
+            # in this manner the error message can be provided to the end user
+            after, before = set_and_check_date_filter_prerequisites(after, before)
+        except ValueError as error:
+            # Return a comprehensive 400 response
+            return response_bad_request(error)
+
+    # Check if the sort_order is either ascending or descending
+    if sort_order not in ['ascending', 'descending']:
+        # Return a comprehensive 400 response
+        return response_bad_request("invalid sort value, use one of: ['ascending', 'descending']")
+
+    # Because we make use of a memoization decorator,
+    # we moved all code to a decorated handle_search_request method
+    tasks_list = handle_search_request(
+        memoize_key,
+        query=query,
+        status=status,
+        after=after,
+        before=before,
+        sort_order=sort_order
+    )
+
+    # Set paginated response
+    paginated_response = set_paginated_response(tasks_list)
 
     # Build 200 response
-    response = make_response(tasks_list)
+    response = make_response(paginated_response)
     response.status_code = HTTPStatus.OK
-    return response
+    return paginated_response

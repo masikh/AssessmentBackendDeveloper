@@ -5,6 +5,8 @@ from werkzeug.exceptions import InternalServerError
 from routes import api
 from models import Task
 from database import db
+from flask_application import memoize
+from generic_helpers.pagination import set_paginated_response
 
 
 def response_ok(task):
@@ -73,8 +75,6 @@ def api_crud_task(task_id):  # pylint: disable=too-many-return-statements
 
         TODO: authentication (authorization will not be implemented for this assessment)
               pagination
-              search
-              filter
               apidocs
     """
 
@@ -118,17 +118,29 @@ def api_crud_task(task_id):  # pylint: disable=too-many-return-statements
 
 def api_crud_task_get_all():
     """ Logic for handling GET request without task_id """
+    @memoize  # key is user token
+    def get_all(user_token):  # pylint: disable=unused-argument
+        """ Because we use memoization, this logic is in its own method
+            to be wrapped by the memoize decorator
+        """
 
-    # Get all tasks from database
-    tasks = Task.query.all()
+        # Get all tasks from database
+        tasks = Task.query.all()
 
-    # Convert tasks to a list of dictionaries
-    tasks_list = [task.serialize() for task in tasks]
+        # Convert tasks to a list of dictionaries and return result
+        return [task.serialize() for task in tasks]
+
+    # Because we make use of a memoization decorator
+    user_token = 'user_token_get_all'  # <- TODO: remove is authorization is implemented
+    response = get_all(user_token)
+
+    # Set paginated response
+    paginated_response = set_paginated_response(response)
 
     # Build 200 response
-    response = make_response(tasks_list)
+    response = make_response(paginated_response)
     response.status_code = HTTPStatus.OK
-    return response
+    return paginated_response
 
 
 def api_crud_task_get(task_id):
@@ -162,6 +174,8 @@ def api_crud_task_post():
     db.session.add(new_task)
     db.session.commit()
 
+    # The memoized response is no longer valid, flush the cache
+    memoize.clear_all_cache()
     return response_ok(new_task)
 
 
@@ -188,6 +202,9 @@ def api_crud_task_patch(task_id):
     db.session.add(task)
     db.session.commit()
 
+    # The memoized response is no longer valid, flush the cache
+    memoize.clear_all_cache()
+
     return response_ok(task)
 
 
@@ -208,4 +225,8 @@ def api_crud_task_delete(task_id):
     # Build 200 response
     response = make_response('DELETED')
     response.status_code = HTTPStatus.OK
+
+    # The memoized response is no longer valid, flush the cache
+    memoize.clear_all_cache()
+
     return response
