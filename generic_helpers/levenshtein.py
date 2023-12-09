@@ -1,4 +1,4 @@
-""" Search with levenshtein distance """
+""" Search with a model and field levenshtein distance """
 from Levenshtein import distance
 
 
@@ -10,7 +10,7 @@ def has_matching_adjacent_characters(query, field_value, threshold=3):
 
 
 def search_by_levenshtein(query, model=None, field_name=None, threshold=21):
-    """ Search by levenshtein word distance (case sensitivity)
+    """ Search by levenshtein word distance (case-insensitive)
 
         see: https://en.wikipedia.org/wiki/Levenshtein_distance for a comprehensive
         explanation what levenshtein distance is.
