@@ -2,11 +2,11 @@
 
 import os
 from uuid import uuid4
-from flask import Flask
 from wsgiserver import WSGIServer
 from routes import api, auth
 from database import db
-
+from models.users_model import Group
+from flask_application import app
 
 DATABASE_URI = f"sqlite:///{os.path.join(os.getcwd(), 'tasks.db')}"
 
@@ -17,7 +17,7 @@ class APIServer:
         self.ip = ip
         self.port = port
         self.debug = bool(os.getenv("debug") is not None)
-        self.app = Flask(f'Flask Server running on port: {self.port}')
+        self.app = app
         self.wsgi_server = None
 
     def config(self):
@@ -38,12 +38,22 @@ class APIServer:
         # Bind and initialize database
         db.init_app(self.app)
 
+    @staticmethod
+    def create_users_group():
+        """Create the 'users' group if it doesn't exist"""
+        group = Group.query.filter_by(name='users').first()
+        if not group:
+            group = Group(name='users')
+            db.session.add(group)
+            db.session.commit()
+
     def create_tables(self):
         """ Create database tables """
 
         # If the tables already exist it will silently continue
         with self.app.app_context():  # <- Is this really needed?
             db.create_all()
+            self.create_users_group()
 
     def run(self):
         """ Start API server"""
@@ -58,7 +68,7 @@ class APIServer:
         self.app.register_blueprint(api)
         self.app.register_blueprint(auth)
 
-        # Create database
+        # Create database upon initialization
         self.create_tables()
 
         # Start the Flask application
