@@ -3,7 +3,7 @@
 from http import HTTPStatus
 from flask import request, make_response, jsonify
 from flask_bcrypt import Bcrypt
-from models.users_model import User
+from models.users_model import User, Group
 from database import db
 from routes import auth
 from generic_helpers.authenticator import Authenticator
@@ -57,6 +57,17 @@ def api_user_create():
 
     # add the new user to the database
     db.session.add(new_user)
+    db.session.commit()
+
+    # add the new user to the group 'users'. First get the group 'users'
+    users_group = Group.query.filter_by(name='users').first()
+
+    # Check for the existence of the group
+    if not users_group:
+        raise RuntimeError('Group users should always exist')
+
+    # Add the new user to the 'users' group
+    users_group.users.append(new_user)
     db.session.commit()
 
     # Build a 200 response
