@@ -57,8 +57,8 @@ def handle_internal_server_error(error):
     return response
 
 
-@api.route('/api/task', defaults={'task_id': None}, methods=['GET', 'POST', 'PATCH', 'DELETE'])
-@api.route('/api/task/<int:task_id>', methods=['GET', 'POST', 'PATCH', 'DELETE'])
+@api.route('/api/task', defaults={'task_id': None}, methods=['GET', 'POST'])
+@api.route('/api/task/<int:task_id>', methods=['GET', 'PATCH', 'DELETE'])
 @authenticated
 def api_crud_task(task_id):  # pylint: disable=too-many-return-statements
     """ CRUD API for tasks, depending on the HTTP-method and argument a handler is chosen
@@ -74,8 +74,6 @@ def api_crud_task(task_id):  # pylint: disable=too-many-return-statements
 
         NOTE: pylint gives a warning about too many return statements, justified in most cases,
         but in my opinion not applicable in this case.
-
-        TODO: authorization, apidocs
     """
 
     # Guard clause: If request method is POST we don't expect a task_id. If task_id is not None
@@ -171,9 +169,8 @@ def api_crud_task_get(task_id):
 
     # Guard clause, bailout if task doesn't exist
     if task is None:
-        response = make_response(jsonify({'error': 'Task not found'}))
-        response.status_code = HTTPStatus.NOT_FOUND
-        return response
+        # If no task is found, leave this function with a 404
+        return response_not_found()
 
     return response_ok(task)
 
@@ -209,9 +206,7 @@ def api_crud_task_patch(task_id):
 
     # Guard clause, bailout if task doesn't exist
     if task is None:
-        response =  make_response(jsonify({'error': 'Task not found'}))
-        response.status_code = HTTPStatus.NOT_FOUND
-        return response
+        return response_not_found()
 
     # Get PATCH data from request
     data = request.get_json()
