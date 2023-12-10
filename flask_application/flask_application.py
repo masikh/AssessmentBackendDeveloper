@@ -4,7 +4,7 @@ import os
 from uuid import uuid4
 from flask import Flask
 from wsgiserver import WSGIServer
-from routes import api
+from routes import api, auth
 from database import db
 
 
@@ -56,6 +56,7 @@ class APIServer:
 
         # Register blueprints (routes)
         self.app.register_blueprint(api)
+        self.app.register_blueprint(auth)
 
         # Create database
         self.create_tables()
