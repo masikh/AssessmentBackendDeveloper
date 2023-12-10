@@ -4,6 +4,7 @@ from http import HTTPStatus
 from itsdangerous import (TimedJSONWebSignatureSerializer as Serializer, BadSignature, SignatureExpired)
 from flask import current_app, request, make_response, jsonify
 from flask_bcrypt import Bcrypt
+from models.users_model import User
 
 
 class Authenticator:
@@ -45,11 +46,26 @@ class Authenticator:
         # Create an instance of Serializer for token validation
         serializer = Serializer(current_app.config['SECRET_KEY'])
         try:
-
             serializer.loads(token)
         except (SignatureExpired, BadSignature):
             return False  # valid token (but expired), invalid token or generic exception
         return True
+
+    @staticmethod
+    def get_user_from_token(token):
+        """ Extract user ID from token """
+
+        # Setup serializer
+        serializer = Serializer(current_app.config['SECRET_KEY'])
+        try:
+            data = serializer.loads(token)
+            user_id = data.get('id')
+            if user_id is None:
+                return None
+            user = User.query.get(user_id)
+            return user
+        except (SignatureExpired, BadSignature):
+            return None  # Invalid token or token expired
 
 
 def authenticated(func):
