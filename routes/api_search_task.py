@@ -127,7 +127,6 @@ def api_search_task():
     page = int(page)
     page_size = int(page_size)
 
-
     # check if the used status exist
     if not is_valid_enum(status, TaskStatus):
         # Dynamically build a list of statuses
