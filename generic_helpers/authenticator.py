@@ -1,6 +1,8 @@
 """ Authentication class """
+from functools import wraps
+from http import HTTPStatus
 from itsdangerous import (TimedJSONWebSignatureSerializer as Serializer, BadSignature, SignatureExpired)
-from flask import current_app
+from flask import current_app, request, make_response, jsonify
 from flask_bcrypt import Bcrypt
 
 
@@ -48,3 +50,30 @@ class Authenticator:
         except (SignatureExpired, BadSignature):
             return False  # valid token (but expired), invalid token or generic exception
         return True
+
+
+def authenticated(func):
+    """ Simple decorator for checking if a valid Authorization header is set """
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        # Get the token from the request heade
+        token = request.headers.get('Authorization')
+
+        # Check if authorization header is set
+        if not token:
+            # Build a 400 response
+            response = make_response(jsonify({'error': 'Authorization header missing'}))
+            response.status_code = HTTPStatus.BAD_REQUEST
+            return response
+
+        # Verify the token using the Authenticator class
+        if not Authenticator.verify_token(token):
+            # Build a 400 response
+            response = make_response(jsonify({'error': 'Forbidden'}))
+            response.status_code = HTTPStatus.FORBIDDEN
+            return response
+        # If the token is valid, proceed with the original function
+
+        return func(*args, **kwargs)
+
+    return wrapper
