@@ -7,6 +7,7 @@ from models import Task
 from database import db
 from flask_application import memoize
 from generic_helpers.pagination import set_paginated_response
+from generic_helpers.authenticator import authenticated
 
 
 def response_ok(task):
@@ -58,6 +59,7 @@ def handle_internal_server_error(error):
 
 @api.route('/api/task', defaults={'task_id': None}, methods=['GET', 'POST', 'PATCH', 'DELETE'])
 @api.route('/api/task/<int:task_id>', methods=['GET', 'POST', 'PATCH', 'DELETE'])
+@authenticated
 def api_crud_task(task_id):  # pylint: disable=too-many-return-statements
     """ CRUD API for tasks, depending on the HTTP-method and argument a handler is chosen
 
@@ -73,9 +75,7 @@ def api_crud_task(task_id):  # pylint: disable=too-many-return-statements
         NOTE: pylint gives a warning about too many return statements, justified in most cases,
         but in my opinion not applicable in this case.
 
-        TODO: authentication (authorization will not be implemented for this assessment)
-              pagination
-              apidocs
+        TODO: authorization, apidocs
     """
 
     # Guard clause: If request method is POST we don't expect a task_id. If task_id is not None
@@ -134,9 +134,15 @@ def api_crud_task_get_all():
     page = request.args.get('page', default='1')
     page_size = request.args.get('page_size', default='20')
 
-    # Because we make use of a memoization decorator
-    user_token = 'user_token_get_all'  # <- TODO: remove is authorization is implemented
-    response = get_all(user_token)
+    # Build memoization key
+    # Create a list of non-None values and Concatenate the non-None values into a string
+    # we also use the users authorization token to distinguish between users
+    token = request.headers.get('Authorization')
+    non_none_values = [token]
+    memoize_key = '+'.join(str(value) for value in non_none_values if value is not None)
+
+    # Because we use memoize, we need a key to retrieve the correct entries
+    response = get_all(memoize_key)
 
     # Check that the pagination parameters are digits
     if not page.isdigit() or not page_size.isdigit():

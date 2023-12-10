@@ -7,6 +7,7 @@ from models import Task, TaskStatus
 from generic_helpers.levenshtein import search_by_levenshtein
 from generic_helpers.is_valid_enum import is_valid_enum
 from generic_helpers.pagination import set_paginated_response
+from generic_helpers.authenticator import authenticated
 from flask_application import memoize
 
 
@@ -93,6 +94,7 @@ def handle_search_request(
 
 
 @api.route('/api/task/search', methods=['GET'])
+@authenticated
 def api_search_task():
     """ Search through the tasks by title """
 
@@ -114,7 +116,9 @@ def api_search_task():
 
     # Build memoization key
     # Create a list of non-None values and Concatenate the non-None values into a string
-    non_none_values = [query, status, after, before, sort_order]  # <- add user_token when authorization is implemented
+    # we also use the users authorization token to distinguish between users
+    token = request.headers.get('Authorization')
+    non_none_values = [token, query, status, after, before, sort_order]
     memoize_key = '+'.join(str(value) for value in non_none_values if value is not None)
 
     # Guard clauses
