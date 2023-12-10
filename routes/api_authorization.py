@@ -36,7 +36,7 @@ def api_user_create():
     # Check if a user with this email is know, return a comprehensive message to the end-user
     user = User.query.filter_by(email=email).first()
     if user:
-        response_bad_request('email already taken')
+        return response_bad_request('email already taken')
 
     # Encrypt the password using bcrypt, no clear text password in the database
     bcrypt = Bcrypt()
