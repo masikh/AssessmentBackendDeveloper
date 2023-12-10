@@ -20,16 +20,7 @@ class TaskStatus(Enum):  # inheritance of the Enum class
 
 class Task(db.Model):
     """
-    This dataclass hold the simple structure for a class. It sets some default attribute values upon
-    initialization (see below)
-
-    Example usage:
-
-    task_item = Task(
-        title="Coding Assignment",
-        description="Complete data structure"
-    )
-    print(task_item)
+    Simple model for a task. We use user authorization to allow to view your own tasks only
 
     Default values:
 
@@ -40,6 +31,11 @@ class Task(db.Model):
 
     """
     __tablename__ = 'tasks'
+    __permissions__ = {
+        "owner": ['read', 'update', 'delete', 'revoke'],
+        "group": [],
+        "other": []
+    }
 
     # Set annotations for class attributes (e.g. int, str etc...)
     # Also set defaults for each field
