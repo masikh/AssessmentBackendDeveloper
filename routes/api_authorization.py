@@ -1,11 +1,12 @@
 """ API for user creation and authentication """
 
 from http import HTTPStatus
-from flask import redirect, url_for, request, make_response, jsonify
+from flask import request, make_response, jsonify
 from flask_bcrypt import Bcrypt
 from models.users_model import User
 from database import db
 from routes import auth
+from generic_helpers.authenticator import Authenticator
 
 
 def response_bad_request(error='Bad request'):
@@ -14,6 +15,15 @@ def response_bad_request(error='Bad request'):
     # Build a 400 response
     response = make_response(jsonify({'error': error}))
     response.status_code = HTTPStatus.BAD_REQUEST
+    return response
+
+
+def response_forbidden(error='Forbidden'):
+    """ Generic 403 response """
+
+    # Build a 403 response
+    response = make_response(jsonify({'error': error}))
+    response.status_code = HTTPStatus.FORBIDDEN
     return response
 
 
@@ -49,4 +59,44 @@ def api_user_create():
     db.session.add(new_user)
     db.session.commit()
 
-    return redirect(url_for('auth.login'))
+    # Build a 200 response
+    response = make_response(jsonify({'email': email, 'name': name}))
+    response.status_code = HTTPStatus.OK
+    return response
+
+
+@auth.route('/api/user/login', methods=['POST'])
+def api_user_login():
+    """ User login route, returns a token """
+
+    # Get post data from request
+    data = request.get_json()
+
+    # Unpack post data
+    email = data.get('email')
+    password = data.get('password')
+
+    # guard clauses
+
+    # Check if email and password are provided
+    if None in [email, password]:
+        response_bad_request('email and password cannot be null')
+
+    # Check if the user exist
+    user = User.query.filter_by(email=email).first()
+    if user is None:
+        return response_forbidden()
+
+    # Check password for the user and create a token or return a forbidden
+    authenticator = Authenticator(user_obj=user, password=password)
+    try:
+        # A value error is raised if the password doesn't match
+        token = authenticator.generate_token()
+    except ValueError as error:
+        # Invalid password
+        return response_forbidden(str(error))
+
+    # Build a 200 response
+    response = make_response(jsonify({'token': token}))
+    response.status_code = HTTPStatus.OK
+    return response
