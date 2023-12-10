@@ -5,7 +5,7 @@ from werkzeug.exceptions import InternalServerError
 from routes import api
 from models import Task
 from database import db
-from flask_application import memoize
+from flask_application import memoize, authorize
 from generic_helpers.pagination import set_paginated_response
 from generic_helpers.authenticator import authenticated
 
@@ -116,10 +116,11 @@ def api_crud_task(task_id):  # pylint: disable=too-many-return-statements
     return response
 
 
+@authorize.read
 def api_crud_task_get_all():
     """ Logic for handling GET request without task_id """
     @memoize  # key is user token
-    def get_all(user_token):  # pylint: disable=unused-argument
+    def get_all(memoize_key):  # pylint: disable=unused-argument
         """ Because we use memoization, this logic is in its own method
             to be wrapped by the memoize decorator
         """
@@ -161,6 +162,7 @@ def api_crud_task_get_all():
     return paginated_response
 
 
+@authorize.read
 def api_crud_task_get(task_id):
     """ Logic for handling GET request with task_id """
 
@@ -176,6 +178,7 @@ def api_crud_task_get(task_id):
     return response_ok(task)
 
 
+@authorize.create()
 def api_crud_task_post():
     """ Logic for handling POST request """
 
@@ -197,6 +200,7 @@ def api_crud_task_post():
     return response_ok(new_task)
 
 
+@authorize.update
 def api_crud_task_patch(task_id):
     """ Logic for handling PATCH request """
 
@@ -226,6 +230,7 @@ def api_crud_task_patch(task_id):
     return response_ok(task)
 
 
+@authorize.delete
 def api_crud_task_delete(task_id):
     """ Logic for handling DELETE request """
 

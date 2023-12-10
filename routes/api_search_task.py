@@ -8,7 +8,7 @@ from generic_helpers.levenshtein import search_by_levenshtein
 from generic_helpers.is_valid_enum import is_valid_enum
 from generic_helpers.pagination import set_paginated_response
 from generic_helpers.authenticator import authenticated
-from flask_application import memoize
+from flask_application import memoize, authorize
 
 
 def response_bad_request(error):
@@ -95,6 +95,7 @@ def handle_search_request(
 
 @api.route('/api/task/search', methods=['GET'])
 @authenticated
+@authorize.read
 def api_search_task():
     """ Search through the tasks by title """
 
@@ -132,7 +133,7 @@ def api_search_task():
     page_size = int(page_size)
 
     # check if the used status exist
-    if not is_valid_enum(status, TaskStatus):
+    if status and not is_valid_enum(status, TaskStatus):
         # Dynamically build a list of statuses
         valid_statuses = str([f'{status.value}' for status in TaskStatus])
 
