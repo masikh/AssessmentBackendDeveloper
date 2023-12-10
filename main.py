@@ -20,7 +20,7 @@ if __name__ == "__main__":
 
     try:
         while True:
-            # Flask runs in its own thread. Reason: If docker (assumption is that the application is run inside a
+            # Flask runs in its own thread. Reason: In docker (assumption is that the application is run inside a
             # docker container) a sigterm is captured as a KeyboardInterrupt. By catching this interrupt we can
             # quickly terminate the Flask application by calling its stop method.
             time.sleep(0.1)  # 0.1 seconds is an eternity for an android...
