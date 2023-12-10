@@ -1,4 +1,6 @@
-[FORMAT]
+[MASTER]
+init-hook='import sys; sys.path.append(".")'
 
+[FORMAT]
 # Set the maximum line length
 max-line-length=120
