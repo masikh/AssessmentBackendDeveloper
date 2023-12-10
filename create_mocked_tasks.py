@@ -6,8 +6,25 @@ import lorem
 from models.task_model import TaskStatus
 
 
-def ingest_tasks():
+PAYLOAD = {'name': 'mock', 'email': 'mock@mock', 'password': 'M0cK'}
+
+
+def create_user():
+    """ Create ingest user """
+    requests.post('http://127.0.0.1:5000/api/user/create', json=PAYLOAD, timeout=1)
+
+
+def get_token():
+    """ Get token from server """
+    response = requests.post('http://127.0.0.1:5000/api/user/login', json=PAYLOAD, timeout=1).json()
+    return response.get('token')
+
+
+def ingest_tasks(token=None):
     """ Create a bunch of mocked tasks """
+
+    # Create Authorozation header
+    headers = {'Authorization': token}
 
     # Print warning message for end-user
     print('Creating 10000 mocked tasks in the database. This might take a while')
@@ -27,7 +44,7 @@ def ingest_tasks():
         payload = {'title': title, 'description': description, 'status': status, 'due_date': due_date}
 
         # Send the payload across the wire
-        response = requests.post('http://127.0.0.1:5000/api/task', json=payload, timeout=1)
+        response = requests.post('http://127.0.0.1:5000/api/task', headers=headers, json=payload, timeout=1)
 
         # Print response status code
         if response.status_code == 200:
@@ -37,4 +54,6 @@ def ingest_tasks():
 
 
 if __name__ == "__main__":
-    ingest_tasks()
+    create_user()
+    user_token = get_token()
+    ingest_tasks(token=user_token)
