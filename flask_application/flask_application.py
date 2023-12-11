@@ -59,7 +59,10 @@ class APIServer:
         """ Start API server"""
 
         # Friendly CLI message
-        print(f'API: http://{self.ip}:{self.port}')
+        print(f'DOCS: http://{self.ip}:{self.port}')
+        print(f'API: http://{self.ip}:{self.port}/api/task')
+        print(f'API: http://{self.ip}:{self.port}/api/task/<id>')
+        print(f'API: http://{self.ip}:{self.port}/api/task/search')
 
         # Setup Flask configuration parameters
         self.config()
