@@ -2,6 +2,7 @@
 from datetime import datetime
 from http import HTTPStatus
 from flask import request, make_response, jsonify
+from flasgger import swag_from
 from routes import api
 from models import Task, TaskStatus
 from generic_helpers.levenshtein import search_by_levenshtein
@@ -9,6 +10,9 @@ from generic_helpers.is_valid_enum import is_valid_enum
 from generic_helpers.pagination import set_paginated_response
 from generic_helpers.authenticator import authenticated
 from flask_application import memoize  # , authorize
+from apidocs.api_task_search import APITaskSearch
+
+apidocs = APITaskSearch()
 
 
 def response_bad_request(error):
@@ -96,6 +100,7 @@ def handle_search_request(
 
 
 @api.route("/api/task/search", methods=["GET"])
+@swag_from(apidocs.api_search_task)
 @authenticated
 # @authorize.read
 def api_search_task():
