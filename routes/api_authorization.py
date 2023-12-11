@@ -41,7 +41,7 @@ def api_user_create():
 
     # guard clause
     if None in [email, name, password]:
-        response_bad_request('email, name and password cannot be null')
+        return response_bad_request('email, name and password cannot be null')
 
     # Check if a user with this email is know, return a comprehensive message to the end-user
     user = User.query.filter_by(email=email).first()
