@@ -3,17 +3,41 @@
 import os
 from uuid import uuid4
 from wsgiserver import WSGIServer
+from flasgger import Swagger
 from routes import doc, api, auth
 from database import db
 from models.users_model import Group
 from flask_application import app
 
+
 DATABASE_URI = f"sqlite:///{os.path.join(os.getcwd(), 'tasks.db')}"
 
 
+# Swagger template
+template = {
+    "swagger": "2.0",
+    "info": {
+        "title": "Tasks CRUD and Search",
+        "description": "Assessment Backend Developer",
+        "contact": {
+            "responsibleOrganization": "luscinia-solutions",
+            "responsibleDeveloper": "Robert Nagtegaal",
+            "email": "robert@luscinia-solutions.com",
+            "url": "https://github.com/masikh",
+        },
+        "version": "version-3.0",
+    },
+    "basePath": "/api",
+    "static_url_path": "/flasgger",
+    "description": "Simple Flask application for assessment",
+    "operationId": "getmyData",
+}
+
+
 class APIServer:
-    """ Main flask server """
-    def __init__(self, ip='127.0.0.1', port=5000):
+    """Main flask server"""
+
+    def __init__(self, ip="127.0.0.1", port=5000):
         self.ip = ip
         self.port = port
         self.debug = bool(os.getenv("debug") is not None)
@@ -21,19 +45,25 @@ class APIServer:
         self.wsgi_server = None
 
     def config(self):
-        """ Setup Flask application defaults """
+        """Setup Flask application defaults"""
 
         # Configuration parameters for tuning Flasks behaviour to our needs
-        self.app.config['JSON_SORT_KEYS'] = True
-        self.app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', str(uuid4()))
-        self.app.config['SESSION_COOKIE_HTTPONLY'] = True
-        self.app.config['REMEMBER_COOKIE_HTTPONLY'] = True
-        self.app.config['SESSION_COOKIE_SAMESITE'] = 'Strict'
-        self.app.config['DEBUG'] = self.debug
+        self.app.config["JSON_SORT_KEYS"] = True
+        self.app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", str(uuid4()))
+        self.app.config["SESSION_COOKIE_HTTPONLY"] = True
+        self.app.config["REMEMBER_COOKIE_HTTPONLY"] = True
+        self.app.config["SESSION_COOKIE_SAMESITE"] = "Strict"
+        self.app.config["DEBUG"] = self.debug
 
         # Configure SQLite database
-        self.app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URI
-        self.app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+        self.app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URI
+        self.app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+        # Swagger
+        self.app.config["SWAGGER"] = {
+            "title": "Assessment Backend Developer",
+            "uiversion": 3,
+        }
 
         # Bind and initialize database
         db.init_app(self.app)
@@ -41,14 +71,14 @@ class APIServer:
     @staticmethod
     def create_users_group():
         """Create the 'users' group if it doesn't exist"""
-        group = Group.query.filter_by(name='users').first()
+        group = Group.query.filter_by(name="users").first()
         if not group:
-            group = Group(name='users')
+            group = Group(name="users")
             db.session.add(group)
             db.session.commit()
 
     def create_tables(self):
-        """ Create database tables """
+        """Create database tables"""
 
         # If the tables already exist it will silently continue
         with self.app.app_context():  # <- Is this really needed?
@@ -56,13 +86,13 @@ class APIServer:
             self.create_users_group()
 
     def run(self):
-        """ Start API server"""
+        """Start API server"""
 
         # Friendly CLI message
-        print(f'DOCS: http://{self.ip}:{self.port}')
-        print(f'API: http://{self.ip}:{self.port}/api/task')
-        print(f'API: http://{self.ip}:{self.port}/api/task/<id>')
-        print(f'API: http://{self.ip}:{self.port}/api/task/search')
+        print(f"apidocs: http://{self.ip}:{self.port}/api/apidocs")
+        print(f"API: http://{self.ip}:{self.port}/api/task")
+        print(f"API: http://{self.ip}:{self.port}/api/task/<id>")
+        print(f"API: http://{self.ip}:{self.port}/api/task/search")
 
         # Setup Flask configuration parameters
         self.config()
@@ -72,6 +102,14 @@ class APIServer:
         self.app.register_blueprint(api)
         self.app.register_blueprint(auth)
 
+        # Start the API documentation services
+        Swagger(
+            self.app,
+            template=template,
+            config={"specs_route": "/api/apidocs/"},
+            merge=True,
+        )
+
         # Create database upon initialization
         self.create_tables()
 
@@ -80,7 +118,7 @@ class APIServer:
         self.wsgi_server.start()
 
     def stop(self):
-        """ Stop API server """
+        """Stop API server"""
 
         # server.stop() is wrapped in a try except. Reasoning is that WSGI is not up to par with is_alive
         # thread. It still uses the obsoleted isAlive(). Since the server is being stopped this error is
@@ -89,4 +127,6 @@ class APIServer:
             self.wsgi_server.stop()
         except AttributeError:
             print("'WorkerThread' object has no attribute 'isAlive'")
-            print("NOTE: Your WSGI doesn't support the is_alive thread methods! (python >3.8)")
+            print(
+                "NOTE: Your WSGI doesn't support the is_alive thread methods! (python >3.8)"
+            )
