@@ -3,7 +3,7 @@
 import os
 from uuid import uuid4
 from wsgiserver import WSGIServer
-from routes import api, auth
+from routes import doc, api, auth
 from database import db
 from models.users_model import Group
 from flask_application import app
@@ -65,6 +65,7 @@ class APIServer:
         self.config()
 
         # Register blueprints (routes)
+        self.app.register_blueprint(doc)
         self.app.register_blueprint(api)
         self.app.register_blueprint(auth)
 

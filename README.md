@@ -30,7 +30,7 @@ It's great that you are taking our test. Through this test, we aim to assess you
 **Assessment criteria:**
 
 - Structure and organization (40%)
-- Reusability and performance (30%)
+- Re-usability and performance (30%)
 - Code quality and best practices (30%)
 
 ## API Documentation
@@ -254,6 +254,8 @@ returns:
 
 ### /api/user/create [methods: POST]
 
+**POST**
+
 body:
 
     {
@@ -281,6 +283,8 @@ returns:
     {'error': str}
 
 ### /api/user/login [methods: POST]
+
+**POST**
 
 body:
 
