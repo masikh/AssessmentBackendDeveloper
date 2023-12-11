@@ -5,7 +5,7 @@ class APITaskSearch:  # pylint: disable=too-few-public-methods
     """flasgger definition for /api/task/search"""
 
     api_search_task = {
-        "tags": ["Tasks"],
+        "tags": ["Task: Search"],
         "summary": "Search tasks",
         "parameters": [
             {
