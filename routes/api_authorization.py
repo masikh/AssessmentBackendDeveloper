@@ -91,7 +91,7 @@ def api_user_login():
 
     # Check if email and password are provided
     if None in [email, password]:
-        response_bad_request('email and password cannot be null')
+        return response_bad_request('email and password cannot be null')
 
     # Check if the user exist
     user = User.query.filter_by(email=email).first()
