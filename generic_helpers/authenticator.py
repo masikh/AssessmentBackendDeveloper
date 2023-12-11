@@ -7,7 +7,8 @@ from http import HTTPStatus
 #    BadSignature,
 #    SignatureExpired,
 # )
-from itsdangerous.url_safe import URLSafeTimedSerializer as Serializer, BadPayload
+from itsdangerous.url_safe import URLSafeTimedSerializer as Serializer
+from itsdangerous.exc import BadTimeSignature, BadSignature, BadPayload
 from flask import current_app, request, make_response, jsonify
 from flask_bcrypt import Bcrypt
 from models.users_model import User
@@ -54,7 +55,7 @@ class Authenticator:
         serializer = Serializer(current_app.config["SECRET_KEY"])
         try:
             serializer.loads(token)
-        except BadPayload:
+        except (BadTimeSignature, BadSignature, BadPayload):
             return (
                 False  # valid token (but expired), invalid token or generic exception
             )
@@ -73,7 +74,7 @@ class Authenticator:
                 return None
             user = User.query.get(user_id)
             return user
-        except BadPayload:
+        except (BadTimeSignature, BadSignature, BadPayload):
             return None  # Invalid token or token expired
 
 
