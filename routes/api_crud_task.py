@@ -17,7 +17,7 @@ apidocs = APITaskCRUD()
 
 
 def response_method_not_allowed():
-    """ Generic response"""
+    """Generic response"""
     response = make_response({"error": "method not allowed"})
     response.status_code = HTTPStatus.METHOD_NOT_ALLOWED
 
