@@ -3,54 +3,62 @@
 from http import HTTPStatus
 from flask import request, make_response, jsonify
 from flask_bcrypt import Bcrypt
+from flasgger import swag_from
 from models.users_model import User, Group
 from database import db
 from routes import auth
 from generic_helpers.authenticator import Authenticator
+from apidocs.api_user_create import APIUserCreate
+from apidocs.api_login import APILogin
 
 
-def response_bad_request(error='Bad request'):
-    """ Generic 400 response """
+apidocs_create = APIUserCreate()
+apidocs_login = APILogin()
+
+
+def response_bad_request(error="Bad request"):
+    """Generic 400 response"""
 
     # Build a 400 response
-    response = make_response(jsonify({'error': error}))
+    response = make_response(jsonify({"error": error}))
     response.status_code = HTTPStatus.BAD_REQUEST
     return response
 
 
-def response_forbidden(error='Forbidden'):
-    """ Generic 403 response """
+def response_forbidden(error="Forbidden"):
+    """Generic 403 response"""
 
     # Build a 403 response
-    response = make_response(jsonify({'error': error}))
+    response = make_response(jsonify({"error": error}))
     response.status_code = HTTPStatus.FORBIDDEN
     return response
 
 
-@auth.route('/api/user/create', methods=['POST'])
+@auth.route("/api/user/create", methods=["POST"])
+@swag_from(apidocs_create.create_user)
 def api_user_create():
-    """ Create a new user """
+    """Create a new user"""
 
     # Get post data from request
     data = request.get_json()
 
     # Unpack post data
-    email = data.get('email')
-    name = data.get('name')
-    password = data.get('password')
+    email = data.get("email")
+    name = data.get("name")
+    password = data.get("password")
 
     # guard clause
     if None in [email, name, password]:
-        return response_bad_request('email, name and password cannot be null')
+        return response_bad_request("email, name and password cannot be null")
 
     # Check if a user with this email is know, return a comprehensive message to the end-user
     user = User.query.filter_by(email=email).first()
     if user:
-        return response_bad_request('email already taken')
+        return response_bad_request("email already taken")
 
     # Encrypt the password using bcrypt, no clear text password in the database
     bcrypt = Bcrypt()
-    password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
+    password_hash = bcrypt.generate_password_hash(password).decode("utf-8")
 
     # create a new user with the hashed password
     new_user = User(email=email, name=name, password=password_hash)
@@ -60,38 +68,39 @@ def api_user_create():
     db.session.commit()
 
     # add the new user to the group 'users'. First get the group 'users'
-    users_group = Group.query.filter_by(name='users').first()
+    users_group = Group.query.filter_by(name="users").first()
 
     # Check for the existence of the group
     if not users_group:
-        raise RuntimeError('Group users should always exist')
+        raise RuntimeError("Group users should always exist")
 
     # Add the new user to the 'users' group
     users_group.users.append(new_user)
     db.session.commit()
 
     # Build a 200 response
-    response = make_response(jsonify({'email': email, 'name': name}))
+    response = make_response(jsonify({"email": email, "name": name}))
     response.status_code = HTTPStatus.OK
     return response
 
 
-@auth.route('/api/user/login', methods=['POST'])
+@auth.route("/api/user/login", methods=["POST"])
+@swag_from(apidocs_login.login_user)
 def api_user_login():
-    """ User login route, returns a token """
+    """User login route, returns a token"""
 
     # Get post data from request
     data = request.get_json()
 
     # Unpack post data
-    email = data.get('email')
-    password = data.get('password')
+    email = data.get("email")
+    password = data.get("password")
 
     # guard clauses
 
     # Check if email and password are provided
     if None in [email, password]:
-        return response_bad_request('email and password cannot be null')
+        return response_bad_request("email and password cannot be null")
 
     # Check if the user exist
     user = User.query.filter_by(email=email).first()
@@ -108,6 +117,6 @@ def api_user_login():
         return response_forbidden(str(error))
 
     # Build a 200 response
-    response = make_response(jsonify({'token': token}))
+    response = make_response(jsonify({"token": token}))
     response.status_code = HTTPStatus.OK
     return response
